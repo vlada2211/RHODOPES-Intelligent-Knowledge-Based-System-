@@ -97,4 +97,4 @@ Author
 Vladyslava Sukhachova
 
 Bachelor's Degree in Software Technologies and Design
-Master's Degree student in Artificial Intelligence
+Master's Degree student 
