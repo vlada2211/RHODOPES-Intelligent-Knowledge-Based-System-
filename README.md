@@ -92,8 +92,6 @@ Example
 Selection:
 Academic Project
 
-This project was developed as a Bachelor's degree project in Software Technologies and Design at Plovdiv University "Paisii Hilendarski".
-
 Author
 
 Vladyslava Sukhachova
