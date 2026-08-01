@@ -1,0 +1,2780 @@
+% =========================================================
+% LIBRARY "MOUNTAINS IN BULGARIA"
+% PROJECT: RHODOPES
+% MODULES: Relief, Climate, Water, Flora, Fauna,
+% Landmarks, Geography, Protected Areas,
+% Tourism, Culture and Legends
+% =========================================================
+
+% =========================================================
+% MAIN MANAGEMENT
+% =========================================================
+start :-
+repeat,
+writeln('\n=== RHODOPES: Management ==='),
+writeln('1. Relief'),
+writeln('2. Climate'),
+writeln('3. Water'),
+writeln('4. Flora'),
+writeln('5. Fauna'),
+writeln('6. Attractions'),
+writeln('7. Geography'),
+writeln('8. Protected Areas'),
+writeln('9. Tourism'),
+writeln('10. Culture and legends'),
+writeln('0. Exit'),
+write('Selection: '),
+read_number(Selection), nl,    
+execute(Selection),
+Selection = 0, !.
+
+execute(1) :- menu_relief, !.
+execute(2) :- menu_climate, !.
+execute(3) :- menu_water, !.
+execute(4) :- menu_flora, !.
+execute(5) :- menu_fauna, !.
+execute(6) :- menu_attractions, !.
+execute(7) :- menu_geography, !.
+execute(8) :- menu_protected, !.
+execute(9) :- menu_tourism, !.
+execute(10) :- menu_culture, !.
+execute(0) :- writeln('Exit the program.'), nl.
+execute(_) :- writeln('Invalid selection!'), nl.
+
+% =========================================================
+% INPUT VALIDATION 
+% =========================================================
+
+read_number(Number) :-
+    read_line_to_string(user_input, Str),
+    catch(number_string(Number, Str), _, Number = -1).
+
+format_label(Atom, Text) :-
+    atomic_list_concat(Parts, '_', Atom),
+    atomic_list_concat(Parts, ' ', Temp),
+    atom_chars(Temp, [H|T]),
+    upcase_atom(H, H2),
+    atom_chars(Text, [H2|T]).
+
+% =========================================================
+% DISPLAY HELPERS
+% =========================================================
+print_text(X) :-
+    format_label(X, T),
+    writeln(T).
+
+print_kv(Label, Value) :-
+    format_label(Label, L),
+    format_label(Value, V),
+    format('~w: ~w~n', [L, V]).
+% =========================================================
+% INPUT NORMALIZATION
+% =========================================================
+normalize_atom(Input, Atom) :-
+    string_lower(Input, Lower),
+    normalize_space(string(Trimmed), Lower),
+    split_string(Trimmed, " _", " _", Words),
+    atomic_list_concat(Words, '_', Atom).
+% =========================================================
+% MODULE: RELIEF
+% =========================================================
+
+menu_relief :-
+    repeat,
+    writeln('\n=== Relief of the Rhodopes ==='),
+    writeln('1. Peaks (name + height)'),
+    writeln('2. Highest peak'),
+    writeln('3. Peaks over 2000 m'),
+    writeln('4. Karst areas'),
+    writeln('5. Longest cave in karst areas'),
+    writeln('6. Lowest peak'),
+    writeln('7. Average peak height'),
+    writeln('8. Peaks between heights'),
+    writeln('9. All caves with karst areas and length'),
+    writeln('10. Caves over given length'),
+    writeln('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    relief_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% DISPLAY HELPERS
+% =========================================================
+
+print_peak(P, H) :-
+    print_kv('Peak', P),
+    print_kv('Height (m)', H),
+    nl.
+
+print_karst(K) :-
+    print_kv('Karst area', K),
+    nl.
+
+print_cave(Name, Place, Len) :-
+    print_kv('Cave', Name),
+    print_kv('Place', Place),
+    print_kv('Length (m)', Len),
+    nl.
+
+print_cave_full(Name, Place, Karst, Len) :-
+    print_kv('Cave', Name),
+    print_kv('Place', Place),
+    print_kv('Karst area', Karst),
+    print_kv('Length (m)', Len),
+    nl.
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+relief_option(1) :-
+    writeln('--- Peaks ---'),
+    forall(peak(P,H), print_peak(P,H)), nl, !.
+
+relief_option(2) :-
+    writeln('--- Highest Peak ---'),
+    highest_peak(P,H),
+    print_peak(P,H), nl, !.
+
+relief_option(3) :-
+    writeln('--- Peaks over 2000 m ---'),
+    forall((peak(P,H), H >= 2000), print_peak(P,H)), nl, !.
+
+relief_option(4) :-
+    writeln('--- Karst Areas ---'),
+    forall(karst_area(K), print_karst(K)), nl, !.
+
+relief_option(5) :-
+    writeln('--- Longest Cave in Karst ---'),
+    longest_cave_karst(Karst, Name, Len),
+    print_kv('Karst area', Karst),
+    print_kv('Longest cave', Name),
+    print_kv('Length (m)', Len),
+    nl, !.
+
+relief_option(6) :-
+    writeln('--- Lowest Peak ---'),
+    lowest_peak(P,H),
+    print_peak(P,H), nl, !.
+
+relief_option(7) :-
+    writeln('--- Average Peak Height ---'),
+    average_height(A),
+    print_kv('Average height (m)', A), nl, !.
+
+relief_option(8) :-
+    write('Min height: '),
+    read_number(Min),
+    write('Max height: '),
+    read_number(Max), nl,
+
+    findall((P,H),
+        (peak(P,H), H >= Min, H =< Max),
+        List
+    ),
+
+    ( List = []
+    -> writeln('No peaks found.')
+    ; forall(member((P,H), List), print_peak(P,H))
+    ),
+    nl, !.
+
+relief_option(9) :-
+    writeln('--- Caves with Karst Areas ---'),
+    forall(
+        (cave(Name, Place, Len),
+         cave_karst(Name, Karst)),
+        print_cave_full(Name, Place, Karst, Len)
+    ), nl, !.
+
+relief_option(10) :-
+    write('Minimum length: '),
+    read_number(Min), nl,
+
+    writeln('--- Caves over given length ---'),
+    forall(
+        (cave(Name, Place, Len), Len >= Min),
+        print_cave(Name, Place, Len)
+    ), nl, !.
+
+relief_option(0) :-
+    writeln('Back...'), nl, !.
+
+relief_option(_) :-
+    writeln('Invalid selection!'), nl, !.
+% =========================================================
+% DATA
+% =========================================================
+
+peak(golyam_perelik, 2191).
+peak(shirokolashki_snezhnik, 2188).
+peak(golyam_persenk, 2091).
+peak(mursalitsa, 1934).
+peak(modar, 1991).
+
+karst_area(dabrash_karst).
+karst_area(velingrad_karst).
+karst_area(peshtera_karst).
+karst_area(dobrostan_karst).
+karst_area(trigrad_karst).
+
+cave(manuilova, ribnovo, 2175).
+cave(lepenitsa, rakitovo, 1525).
+cave(yagodinska, yagodina, 8500).
+cave(goloboitsa, smilyan, 1800).
+cave(garvanitsa, kosovo, 897).
+
+cave_karst(manuilova, dabrash_karst).
+cave_karst(lepenitsa, velingrad_karst).
+cave_karst(yagodinska, trigrad_karst).
+cave_karst(goloboitsa, smolyan_karst).
+cave_karst(garvanitsa, dobrostan_karst).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+highest_peak(P,H) :-
+    peak(P,H),
+    \+ (peak(_,H2), H2 > H).
+
+lowest_peak(P,H) :-
+    peak(P,H),
+    \+ (peak(_,H2), H2 < H).
+
+average_height(Avg) :-
+    findall(H, peak(_,H), L),
+    sum_list(L, Sum),
+    length(L, Count),
+    Count > 0,
+    Avg is Sum / Count.
+
+longest_cave_karst(Karst, Name, Len) :-
+    cave(Name, _, Len),
+    cave_karst(Name, Karst),
+    \+ (
+        cave(Other, _, Len2),
+        cave_karst(Other, Karst),
+        Len2 > Len
+    ).
+% =========================================================
+% MODULE: CLIMATE
+% =========================================================
+
+menu_climate :-
+    repeat,
+    writeln('\n=== Climate of the Rhodopes ==='),
+    writeln('1. Climate types'),
+    writeln('2. Precipitation'),
+    writeln('3. Snow cover'),
+    writeln('4. Climatic influences'),
+    writeln('5. Characteristic phenomena'),
+    writeln('6. Is climate Mediterranean?'),
+    writeln('7. Check phenomenon'),
+    writeln('8. Climate comparison'),
+    writeln('9. Climate cause-effect'),
+    writeln('10. Explanation'),
+    writeln('11. True/False test'),
+    writeln('12. Quiz'),
+    writeln('13. Phenomenon location'),
+    writeln('14. Recommendation'),
+    writeln('15. Temperature gradients'),
+    writeln('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    climate_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% INPUT NORMALIZATION
+% =========================================================
+
+normalize_text(Input, Output) :-
+    string_lower(Input, Lower),
+    split_string(Lower, " _.,!?;:", " _.,!?;:", Parts),
+    atomic_list_concat(Parts, '_', Output).
+
+match_phenomenon(Input, Full) :-
+    climatic_phenomenon(Full),
+    normalize_text(Full, FNorm),
+    sub_string(FNorm, _, _, _, Input).
+% =========================================================
+% OPTIONS
+% =========================================================
+
+climate_option(1) :-
+    writeln('--- Climate Types ---'),
+    forall(climate_type(T),
+        print_kv('Climate type', T)
+    ),
+    nl, !.
+
+climate_option(2) :-
+    writeln('--- Precipitation ---'),
+    precipitation(Min, Max),
+    print_kv('Precipitation min', Min),
+    print_kv('Precipitation max', Max),
+    nl, !.
+
+climate_option(3) :-
+    writeln('--- Snow Cover ---'),
+    snow_cover(Min, Max),
+    print_kv('Snow cover min (months)', Min),
+    print_kv('Snow cover max (months)', Max),
+    nl, !.
+
+climate_option(4) :-
+    writeln('--- Climatic Influences ---'),
+    forall(climate_influence(V),
+        print_kv('Influence', V)
+    ),
+    nl, !.
+
+climate_option(5) :-
+    writeln('--- Climatic Phenomena ---'),
+    forall(climatic_phenomenon(P),
+        print_kv('Phenomenon', P)
+    ),
+    nl, !.
+
+climate_option(6) :-
+    ( is_mediterranean
+    -> writeln('Yes, Mediterranean influence exists.')
+    ;  writeln('No Mediterranean influence.')
+    ),
+    nl, !.
+
+climate_option(7) :-
+    write('Enter phenomenon: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, P), nl,
+
+    ( match_phenomenon(P, _)
+    -> writeln('Exists!')
+    ;  writeln('No such phenomenon.')
+    ),
+    nl, !.
+
+climate_option(8) :-
+    writeln('--- Climate Comparison ---'),
+    forall(climate_comparison(Type, Desc),
+        print_kv(Type, Desc)
+    ),
+    nl, !.
+
+climate_option(9) :-
+    writeln('--- Climate Cause-Effect ---'),
+    forall(climate_effect(A, B),
+        (
+            print_kv('Cause', A),
+            print_kv('Effect', B),
+            nl
+        )
+    ),
+    nl, !.
+
+climate_option(10) :-
+    writeln('--- Explanation ---'),
+    writeln('The Rhodopes have a mixed climate because:'),
+    forall(climate_reason(climate_diversity, Reason),
+        print_text(Reason)
+    ),
+    nl, !.
+
+climate_option(11) :-
+    write('True or False: Cool summers are characteristic for the Rhodopes: '),
+    read_line_to_string(user_input, Ans),
+    normalize_text(Ans, A),
+
+    ( A = true
+    -> print_text('Correct!')
+    ; A = false
+    -> print_text('Incorrect. Cool summers are characteristic for the Rhodopes.')
+    ; print_text('Please answer True or False.')
+    ),
+    nl, !.
+
+climate_option(12) :-
+    print_text('--- Quiz ---'),
+
+    print_text('1. What climate type dominates the Rhodopes?'),
+    read_line_to_string(user_input, A1),
+    normalize_text(A1, R1),
+
+    ( R1 = mountainous
+    -> print_text('Correct!')
+    ;  print_text('Wrong: mountainous')
+    ),
+
+    writeln('2. Where do temperature inversions occur?'),
+	read_line_to_string(user_input, A2),
+	normalize_text(A2, R2),
+
+	( sub_string(R2, _, _, _, "basin")
+	-> print_text('Correct!')
+	;  print_text('Wrong: basins')
+	),
+    
+    print_text('3. What causes fog?'),
+    read_line_to_string(user_input, A3),
+    normalize_text(A3, R3),
+
+    ( R3 = river_valleys
+    ; R3 = valleys
+    ; R3 = river
+    )
+    -> print_text('Correct!')
+    ;  print_text('Wrong: river valleys'),
+
+    print_text('4. Are winters mild in the east? (yes/no)'),
+    read_line_to_string(user_input, A4),
+    normalize_text(A4, R4),
+
+    ( R4 = yes
+    -> print_text('Correct!')
+    ;  print_text('Wrong: yes')
+    ),
+    nl, !.
+
+climate_option(13) :-
+    write('Enter phenomenon: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, P),
+
+    ( match_phenomenon(P, Full),
+      phenomenon_location(Full, L)
+    -> format('Occurs in: ~w~n', [L])
+    ;  writeln('No data.')
+    ),
+    nl, !.
+
+climate_option(14) :-
+    print_text('--- Recommendation ---'),
+
+    forall(
+        visit_recommendation(Type, Value),
+        print_kv(Type, Value)
+    ),
+
+    nl, !.
+
+climate_option(15) :-
+    writeln('--- Temperature Gradients ---'),
+
+    forall(temperature_gradient(Type, Value),
+        print_kv(Type, Value)
+    ),
+
+    forall(temperature_inversion(I),
+        print_kv('Inversion', I)
+    ),
+    nl, !.
+
+climate_option(0) :-
+    writeln('Back...'),
+    nl, !.
+
+climate_option(_) :-
+    writeln('Invalid selection!'),
+    nl, !.
+
+% =========================================================
+% DATA
+% =========================================================
+
+climate_type(mountainous).
+climate_type(transitional_continental).
+climate_type(mediterranean_influence).
+
+precipitation(750,1100).
+snow_cover(3,6).
+
+climate_influence(northern_moderate_continental_zone).
+climate_influence(southern_mediterranean_subtropical_zone).
+climate_influence(altitude_effect).
+climate_influence(temperature_inversions_in_the_basins).
+climate_influence(high_purity_of_the_air).
+
+climatic_phenomenon(fog_along_the_rivers).
+climatic_phenomenon(mild_winters).
+climatic_phenomenon(cool_summers).
+climatic_phenomenon(temperature_inversions).
+climatic_phenomenon(orographic_precipitation).
+climatic_phenomenon(strong_winds).
+climatic_phenomenon(late_spring_frosts).
+climatic_phenomenon(high_air_humidity).
+
+phenomenon_location(fog_along_the_rivers, valleys).
+phenomenon_location(mild_winters, east_rhodopes).
+phenomenon_location(cool_summers, mid_altitudes).
+phenomenon_location(temperature_inversions, basins).
+phenomenon_location(orographic_precipitation, mountain_slopes).
+phenomenon_location(strong_winds, mountain_ridges).
+phenomenon_location(late_spring_frosts, high_fields).
+phenomenon_location(high_air_humidity, valleys).
+
+climate_effect(high_altitude, lower_temperature).
+climate_effect(river_valleys, fog_formation).
+climate_effect(mediterranean_influence, mild_winters).
+
+climate_comparison(mountainous, lower_temperatures_more_snow).
+climate_comparison(transitional_continental, warmer_mixed_influences).
+
+visit_recommendation(best_time, spring_and_early_autumn).
+visit_recommendation(weather, mild_temperatures).
+visit_recommendation(reason, comfortable_for_hiking).
+visit_recommendation(reason, beautiful_nature).
+
+climate_reason(climate_diversity, altitude_differences).
+climate_reason(climate_diversity, mediterranean_influence).
+climate_reason(climate_diversity, valley_circulation).
+
+temperature_gradient(mean_annual_temperature, 0.6).
+temperature_gradient(troposphere_average, 0.64).
+temperature_gradient(mean_maximum_temperature, 0.9).
+
+temperature_inversion(cold_half_year).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+is_mediterranean :-
+    climate_type(mediterranean_influence).
+
+phenomenon_exists(P) :-
+    climatic_phenomenon(X),
+    normalize_text(X, P).
+
+% =========================================================
+% MODULE: WATER
+% =========================================================
+
+menu_water :-
+    repeat,
+    writeln('\n=== Water in the Rhodopes ==='),
+    writeln('1. Rivers'),
+    writeln('2. Reservoirs'),
+    writeln('3. Length of the Vacha River'),
+    writeln('4. Mineral springs'),
+    writeln('5. Longest river'),
+    writeln('6. Number of rivers'),
+    writeln('7. Check river'),
+    writeln('8. Rivers longer than X'),
+    writeln('9. Rivers with dams'),
+    writeln('10. Check mineral spring'),
+    writeln('11. Average river length'),
+    writeln('12. Shortest river'),
+    writeln('13. Rivers by first letter'),
+    writeln('0. Back'),
+    write('Selection: '),
+
+    read_number(I), nl,
+    water_option(I),
+
+    ( I = 0 -> ! ; fail ).
+% =========================================================
+% SAFE NUMBER INPUT
+% =========================================================
+
+safe_number(Str, Num) :-
+    catch(number_string(Num, Str), _, fail).
+% =========================================================
+% OPTIONS
+% =========================================================
+
+water_option(1) :-
+    writeln('--- Rivers ---'),
+    forall(river(R), print_text(R)), nl, !.
+
+water_option(2) :-
+    writeln('--- Reservoirs ---'),
+    forall(dam(D), print_text(D)), nl, !.
+
+water_option(3) :-
+    river_length(vacha, Km),
+    print_kv('Vacha river length (km)', Km), nl, !.
+
+water_option(4) :-
+    writeln('--- Mineral Springs ---'),
+    forall(mineral_spring(M), print_text(M)), nl, !.
+
+water_option(5) :-
+    writeln('--- Longest River ---'),
+    longest_river(R, L),
+    print_kv('River', R),
+    print_kv('Length (km)', L), nl, !.
+
+water_option(6) :-
+    count_rivers(N),
+    print_kv('Total rivers', N), nl, !.
+
+water_option(7) :-
+    write('Enter river name: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Name), nl,
+
+    ( river(Name)
+    -> print_kv('Result', 'River exists')
+    ;  print_kv('Result', 'No such river')
+    ),
+    nl, !.
+
+water_option(8) :-
+    write('Enter minimum length: '),
+    read_line_to_string(user_input, Str), nl,
+
+    ( safe_number(Str, Min)
+    -> findall(R, (river_length(R, L), L > Min), List),
+       ( List \= []
+       -> forall(member(R, List), print_text(R))
+       ;  writeln('No rivers found.')
+       )
+    ;  writeln('Invalid number.')
+    ),
+    nl, !.
+
+water_option(9) :-
+    writeln('--- Rivers with Dams ---'),
+    forall(
+        dam_on_river(D, R),
+        (
+            print_kv('River', R),
+            print_kv('Dam', D),
+            nl
+        )
+    ), !.
+
+water_option(10) :-
+    write('Enter location: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, N), nl,
+
+    ( mineral_spring(N)
+    -> print_kv('Result', 'Mineral spring exists')
+    ;  print_kv('Result', 'No such location')
+    ),
+    nl, !.
+
+water_option(11) :-
+    findall(L, river_length(_, L), List),
+    sum_list(List, Sum),
+    length(List, C),
+    ( C > 0
+    -> Avg is Sum / C,
+       print_kv('Average river length (km)', Avg)
+    ;  writeln('No data.')
+    ),
+    nl, !.
+
+water_option(12) :-
+    writeln('--- Shortest River ---'),
+    river_length(R, L),
+    \+ (river_length(_, L2), L2 < L),
+    print_kv('River', R),
+    print_kv('Length (km)', L), nl, !.
+
+water_option(13) :-
+    write('Enter first letter: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, L), nl,
+
+    findall(R,
+        ( river(R),
+          sub_string(R, 0, 1, _, L)
+        ),
+        List
+    ),
+
+    ( List \= []
+    -> forall(member(R, List),
+              print_text(R))
+    ;  print_text('No rivers found with this letter.')
+    ),
+
+    nl, !.
+
+water_option(0) :-
+    writeln('Back...'), nl, !.
+
+water_option(_) :-
+    writeln('Invalid option!'), nl, !.
+
+% =========================================================
+% DATA
+% =========================================================
+
+river(arda).
+river(vacha).
+river(chepelarska).
+river(dospat).
+river(struma).
+river(mesta).
+river(maritsa).
+
+river_length(arda, 241.3).
+river_length(vacha, 112).
+river_length(chepelarska, 86).
+river_length(dospat, 96).
+river_length(struma, 290).
+river_length(mesta, 290).
+river_length(dospat, 126).
+river_length(maritsa, 321).
+
+dam(tsankov_kamak).
+dam(kardzhali).
+dam(studen_kladenets).
+dam(ivaylovgrad).
+dam(krichim).
+dam(dospat).
+dam(batak).
+
+dam_on_river(tsankov_kamak, vacha).
+dam_on_river(kardzhali, arda).
+dam_on_river(studen_kladenets, arda).
+dam_on_river(ivaylovgrad, arda).
+dam_on_river(krichim, vacha).
+dam_on_river(dospat, dospat).
+
+mineral_spring(devin).
+mineral_spring(velingrad).
+mineral_spring(narechenski_bani).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+longest_river(R, L) :-
+    river_length(R, L),
+    \+ (river_length(_, L2), L2 > L).
+
+count_rivers(N) :-
+    findall(R, river(R), L),
+    length(L, N).
+
+% =========================================================
+% MODULE: FLORA
+% =========================================================
+
+menu_flora :-
+    repeat,
+    writeln('\n=== Flora of the Rhodopes ==='),
+    writeln('1. Characteristic plants'),
+    writeln('2. Endemics/relicts'),
+    writeln('3. Forest belts'),
+    writeln('4. Plants by type'),
+    writeln('5. Check plant'),
+    writeln('6. Plants by forest belt'),
+    writeln('7. Plants by altitude'),
+    writeln('8. Show plant info'),
+    writeln('9. Count plants'),
+    writeln('10. Plants by first letter'),
+    writeln('11. Flora statistics'),
+    writeln('12. Medicinal plants'),
+    writeln('13. Coniferous vs deciduous'),
+    writeln('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    flora_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+flora_option(1) :-
+    writeln('--- Plants ---'),
+    forall(plant(P),
+        print_kv('Plant', P)
+    ),
+    nl, !.
+
+flora_option(2) :-
+    writeln('--- Endemic Plants ---'),
+    forall(endemic(E),
+        print_kv('Endemic', E)
+    ),
+    nl, !.
+
+flora_option(3) :-
+    writeln('--- Forest Belts ---'),
+    forall(forest_belt(B),
+        print_kv('Forest belt', B)
+    ),
+    nl, !.
+
+flora_option(4) :-
+    write('Enter type: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Type), nl,
+
+    forall(
+        (plant(P), plant_type(P, Type)),
+        print_kv('Plant', P)
+    ),
+    nl, !.
+
+flora_option(5) :-
+    write('Enter plant: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Name), nl,
+
+    ( plant(Name)
+    -> writeln('Plant exists!')
+    ;  writeln('No such plant.')
+    ),
+    nl, !.
+
+flora_option(6) :-
+    write('Enter belt: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Raw),
+
+    ( normalize_belt(Raw, Belt)
+    -> findall(P, plant_belongs_to(P, Belt), List),
+       ( List \= []
+       -> forall(member(P, List), print_kv('Plant', P))
+       ;  writeln('No plants found.')
+       )
+    ;  writeln('Invalid belt.')
+    ),
+    nl, !.
+
+flora_option(7) :-
+    write('Enter altitude: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, A),
+
+    ( valid_altitude(A)
+    -> findall(P, plant_altitude(P, A), List),
+       ( List \= []
+       -> forall(member(P, List), print_kv('Plant', P))
+       ;  writeln('No plants found.')
+       )
+    ;  writeln('Invalid altitude.')
+    ),
+    nl, !.
+
+flora_option(8) :-
+    write('Enter plant: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Name),
+
+    ( plant_info(Name, Info)
+    -> print_kv('Info', Info)
+    ;  writeln('No information.')
+    ),
+    nl, !.
+
+flora_option(9) :-
+    findall(P, plant(P), L),
+    length(L, N),
+    print_kv('Total plants', N),
+    nl, !.
+
+flora_option(10) :-
+    write('Enter first letter: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, L),
+
+    findall(P,
+        (plant(P),
+         atom_string(P, S),
+         sub_string(S, 0, 1, _, L)),
+        List),
+
+    ( List \= []
+    -> forall(member(P, List),
+              print_kv('Plant', P))
+    ;  writeln('No matches found.')
+    ),
+    nl, !.
+
+flora_option(11) :-
+    count_type(tree, Trees),
+    count_type(shrub, Shrubs),
+    count_type(herb, Herbs),
+
+    print_text('--- Statistics ---'),
+    print_kv('Trees', Trees),
+    print_kv('Shrubs', Shrubs),
+    print_kv('Herbs', Herbs),
+
+    findall((T,C),
+        ( member(T, [tree, shrub, herb]),
+          count_type(T, C)
+        ),
+        List),
+
+    most_common_type(List, MostType, Count),
+
+    print_kv('Most common type', MostType),
+    print_kv('Count', Count),
+
+    nl, !.
+
+flora_option(12) :-
+    writeln('--- Medicinal Plants ---'),
+    forall(medicinal(P),
+        print_kv('Plant', P)
+    ),
+    nl, !.
+
+flora_option(13) :-
+    writeln('--- Coniferous ---'),
+    forall(is_coniferous(P),
+        print_kv('Plant', P)
+    ),
+
+    writeln('--- Deciduous ---'),
+    forall(is_deciduous(P),
+        print_kv('Plant', P)
+    ),
+    nl, !.
+
+flora_option(0) :-
+    writeln('Back...'), nl, !.
+
+flora_option(_) :-
+    writeln('Invalid option!'), nl, !.
+
+% =========================================================
+% DATA
+% =========================================================
+
+plant(pine).
+plant(fir).
+plant(beech).
+plant(oak).
+plant(spruce).
+plant(juniper).
+plant(rosehip).
+plant(wild_strawberries).
+
+plant_type(pine, tree).
+plant_type(fir, tree).
+plant_type(beech, tree).
+plant_type(oak, tree).
+plant_type(spruce, tree).
+plant_type(juniper, shrub).
+plant_type(rosehip, shrub).
+plant_type(wild_strawberries, herb).
+
+endemic(rhodope_silivryak).
+endemic(carex_elata).
+endemic(carex_limosa).
+endemic(fritillaria_gussichiae).
+endemic(potentilla_paliuris).
+endemic(auriscalpium_vulgare_gray).
+endemic(bondarzewia_montana).
+endemic(lentaria_byssiseda_corner).
+
+plant_belongs_to(pine, coniferous_belt).
+plant_belongs_to(fir, coniferous_belt).
+plant_belongs_to(spruce, coniferous_belt).
+plant_belongs_to(juniper, coniferous_belt).
+plant_belongs_to(oak, oak_belt).
+plant_belongs_to(beech, beech_belt).
+plant_belongs_to(rosehip, oak_belt).
+plant_belongs_to(wild_strawberries, beech_belt).
+
+plant_altitude(pine, high).
+plant_altitude(fir, high).
+plant_altitude(spruce, high).
+plant_altitude(juniper, high).
+plant_altitude(beech, medium).
+plant_altitude(oak, low).
+plant_altitude(rosehip, low).
+plant_altitude(wild_strawberries, medium).
+
+plant_info(pine, evergreen_coniferous_tree).
+plant_info(fir, tall_conifer_with_soft_needles).
+plant_info(oak, strong_deciduous_tree).
+plant_info(beech, dense_forest_tree).
+plant_info(spruce, cold_resistant_conifer).
+plant_info(juniper, evergreen_shrub_with_berries).
+plant_info(rosehip, shrub_with_medicinal_fruits).
+plant_info(wild_strawberries, small_herb_with_edible_fruits).
+
+valid_altitude(low).
+valid_altitude(medium).
+valid_altitude(high).
+
+forest_belt(oak_belt).
+forest_belt(beech_belt).
+forest_belt(coniferous_belt).
+
+medicinal(rosehip).
+medicinal(wild_strawberries).
+
+normalize_belt(oak, oak_belt).
+normalize_belt(oak_belt, oak_belt).
+normalize_belt(beech, beech_belt).
+normalize_belt(beech_belt, beech_belt).
+normalize_belt(coniferous, coniferous_belt).
+normalize_belt(coniferous_belt, coniferous_belt).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+count_type(T,C) :-
+    findall(P, plant_type(P,T), L),
+    length(L,C).
+
+most_common_type(List,T,C) :-
+    member((T,C),List),
+    \+ (member((_,C2),List), C2 > C).
+
+is_coniferous(P) :-
+    plant_belongs_to(P, coniferous_belt).
+
+is_deciduous(P) :-
+    plant_type(P, tree),
+    \+ is_coniferous(P).
+
+% =========================================================
+% MODULE: FAUNA
+% =========================================================
+
+menu_fauna :-
+    repeat,
+    writeln('\n=== Fauna of the Rhodopes ==='),
+    writeln('1. Animals by type'),
+    writeln('2. Animals by habitat'),
+    writeln('3. Protected species'),
+    writeln('4. Predators'),
+    writeln('5. Herbivores'),
+    writeln('6. Search animal'),
+    writeln('7. Animal information'),
+    writeln('8. Conservation status'),
+    writeln('9. Statistics'),
+    writeln('10. Compare animals'),
+    writeln('11. Ecosystem role'),
+    writeln('12. Dangerous animals'),
+    writeln('13. Quiz'),
+    writeln('0. Back'),
+    write('Selection: '),
+
+    read_number(I), nl,
+    fauna_option(I),
+
+    ( I = 0 -> ! ; fail ).
+% =========================================================
+% OUTPUT FORMATTING
+% =========================================================
+
+capitalize_word(Word, Capitalized) :-
+    atom_chars(Word, [First|Rest]),
+    upcase_atom(First, Upper),
+    atom_chars(Capitalized, [Upper|Rest]).
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+fauna_option(1) :-
+    write('Enter type: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Type), nl,
+
+    ( valid_type(Type)
+    -> forall(animal_type(A, Type), print_text(A))
+    ;  writeln('Invalid type!')
+    ),
+    nl, !.
+
+fauna_option(2) :-
+    write('Enter habitat: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, H), nl,
+
+    findall(A, animal_habitat(A, H), L),
+    ( L \= []
+    -> forall(member(A, L), print_text(A))
+    ;  writeln('No animals found.')
+    ),
+    nl, !.
+
+fauna_option(3) :-
+    writeln('--- Protected Species ---'),
+    forall(protected_species(S), print_text(S)), nl, !.
+
+fauna_option(4) :-
+    writeln('--- Predators ---'),
+    forall(predator(P), print_text(P)), nl, !.
+
+fauna_option(5) :-
+    writeln('--- Herbivores ---'),
+    forall(herbivore(H), print_text(H)), nl, !.
+
+fauna_option(6) :-
+    write('Enter search: '),
+    read_line_to_string(user_input, Q),
+    normalize_text(Q, Query),
+
+    search_animals(Query, L),
+    ( L \= []
+    -> forall(member(A, L), print_text(A))
+    ;  writeln('Nothing found.')
+    ),
+    nl, !.
+
+fauna_option(7) :-
+    write('Enter animal: '),
+    read_line_to_string(user_input, In),
+    normalize_text(In, A),
+
+    ( animal_info(A, Info)
+    -> print_text(A),
+       writeln(Info)
+    ;  writeln('No information.')
+    ),
+    nl, !.
+
+fauna_option(8) :-
+    write('Enter status: '),
+    read_line_to_string(user_input, In),
+    normalize_text(In, S), nl,
+
+    findall(A, conservation_status(A, S), L),
+    ( L \= []
+    -> forall(member(A, L), print_text(A))
+    ;  writeln('No animals found.')
+    ),
+    nl, !.
+
+fauna_option(9) :-
+    count_animals(mammal, M),
+    count_animals(bird, B),
+    count_animals(reptile, R),
+    count_animals(amphibian, A),
+
+    print_kv('Mammals', M),
+    print_kv('Birds', B),
+    print_kv('Reptiles', R),
+    print_kv('Amphibians', A),
+    nl, !.
+
+fauna_option(10) :-
+    write('First animal: '),
+    read_line_to_string(user_input, A1),
+    normalize_text(A1, X),
+
+    write('Second animal: '),
+    read_line_to_string(user_input, A2),
+    normalize_text(A2, Y), nl,
+
+    ( animal(X), animal(Y)
+    -> compare_animals(X, Y)
+    ;  writeln('Not found.')
+    ),
+    nl, !.
+
+fauna_option(11) :-
+    write('Role: '),
+    read_line_to_string(user_input, R),
+    normalize_text(R, Role), nl,
+
+    forall(ecosystem_role(A, Role), print_text(A)), nl, !.
+
+fauna_option(12) :-
+    writeln('--- Dangerous ---'),
+    forall(dangerous(A), print_text(A)), nl, !.
+
+fauna_option(13) :-
+    writeln('--- Quiz ---'),
+
+    writeln('1. Which animal is a predator? (wolf / roe_deer)'),
+    read_line_to_string(user_input, A1),
+    normalize_text(A1, R1),
+    ( R1 == wolf
+    -> writeln('Correct!')
+    ; writeln('Wrong! Correct answer: wolf')
+    ),
+    nl,
+
+    writeln('2. Is brown bear dangerous? (yes/no)'),
+    read_line_to_string(user_input, A2),
+    normalize_text(A2, R2),
+
+    ( R2 == yes
+    -> writeln('Correct!')
+    ; writeln('Wrong! Correct answer: yes')
+    ),
+    nl,
+
+    writeln('3. Which animal lives in rivers? (otter / eagle)'),
+    read_line_to_string(user_input, A3),
+    normalize_text(A3, R3),
+
+    ( R3 == otter
+    -> writeln('Correct!')
+    ; writeln('Wrong! Correct answer: otter')
+    ),
+    nl,
+
+    writeln('4. Is eagle a bird? (yes/no)'),
+    read_line_to_string(user_input, A4),
+    normalize_text(A4, R4),
+
+    ( R4 == yes
+    -> writeln('Correct!')
+    ; writeln('Wrong! Correct answer: yes')
+    ),
+    nl,
+
+    writeln('5. Which animal is protected? (otter / wild_boar)'),
+    read_line_to_string(user_input, A5),
+    normalize_text(A5, R5),
+
+    ( R5 == otter
+    -> writeln('Correct!')
+    ; writeln('Wrong! Correct answer: otter')
+    ),
+    nl, !.
+
+fauna_option(0) :- writeln('Back...'), nl, !.
+fauna_option(_) :- writeln('Invalid option!'), nl, !.
+
+% =========================================================
+% DATA
+% =========================================================
+
+mammal(brown_bear).
+mammal(wolf).
+mammal(roe_deer).
+mammal(european_bison).
+mammal(wild_boar).
+mammal(stone_marten).
+mammal(wildcat).
+mammal(otter).
+
+bird(white_headed_vulture).
+bird(egyptian_vulture).
+bird(rock_eagle).
+bird(owl).
+bird(blue_rock_thrush).
+bird(wallcreeper).
+bird(red_rumped_swallow).
+bird(common_rock_swallow).
+bird(alpine_swift).
+bird(eagle).
+bird(european_nightjar).
+bird(eurasian_wryneck).
+bird(white_tailed_eagle).
+bird(black_stork).
+bird(black_kite).
+bird(honey_buzzard).
+bird(long_legged_buzzard).
+
+reptile(wall_lizard).
+reptile(nose_horned_viper).
+reptile(montpellier_snake).
+reptile(caspian_whipsnake).
+reptile(green_lizard).
+reptile(crimean_lizard).
+reptile(european_legless_lizard).
+reptile(spur_thighed_tortoise).
+reptile(marginated_tortoise).
+
+amphibian(common_toad).
+amphibian(tree_frog).
+
+predator(wolf).
+predator(brown_bear).
+predator(wildcat).
+predator(nose_horned_viper).
+predator(otter).
+
+herbivore(roe_deer).
+herbivore(european_bison).
+
+omnivore(wild_boar).
+
+protected_species(white_headed_vulture).
+protected_species(egyptian_vulture).
+protected_species(white_tailed_eagle).
+protected_species(black_stork).
+protected_species(spur_thighed_tortoise).
+protected_species(marginated_tortoise).
+protected_species(european_legless_lizard).
+protected_species(black_kite).
+protected_species(long_legged_buzzard).
+protected_species(honey_buzzard).
+protected_species(otter).
+
+animal_habitat(brown_bear, forest).
+animal_habitat(wolf, forest).
+animal_habitat(roe_deer, forest).
+animal_habitat(wild_boar, forest).
+animal_habitat(otter, river).
+animal_habitat(wall_lizard, rocky).
+animal_habitat(nose_horned_viper, rocky).
+animal_habitat(egyptian_vulture, mountains).
+animal_habitat(white_headed_vulture, mountains).
+animal_habitat(wildcat, forest).
+animal_habitat(stone_marten, forest).
+animal_habitat(owl, forest).
+animal_habitat(eagle, mountains).
+animal_habitat(white_tailed_eagle, river).
+animal_habitat(black_stork, river).
+animal_habitat(caspian_whipsnake, rocky).
+animal_habitat(montpellier_snake, rocky).
+animal_habitat(european_legless_lizard, forest).
+animal_habitat(tree_frog, river).
+animal_habitat(common_toad, forest).
+
+conservation_status(white_headed_vulture, endangered).
+conservation_status(white_tailed_eagle, protected).
+conservation_status(black_stork, protected).
+conservation_status(black_kite, protected).
+conservation_status(honey_buzzard, protected).
+conservation_status(long_legged_buzzard, protected).
+conservation_status(spur_thighed_tortoise, protected).
+conservation_status(marginated_tortoise, protected).
+conservation_status(european_bison, protected).
+conservation_status(wildcat, vulnerable).
+
+animal_info(european_bison,'Largest land mammal in Europe').
+animal_info(wild_boar,'Omnivorous mammal common in Rhodope forests').
+animal_info(stone_marten,'Small predator living in forests and rocky areas').
+animal_info(wildcat,'Rare wild feline inhabiting mountain forests').
+animal_info(white_headed_vulture,'Large scavenger bird protected in Bulgaria').
+animal_info(white_tailed_eagle,'One of the largest birds of prey in Europe').
+animal_info(black_stork,'Rare forest stork nesting near rivers').
+animal_info(black_kite,'Bird of prey often found near water').
+animal_info(honey_buzzard,'Raptor feeding mainly on insects and larvae').
+animal_info(long_legged_buzzard,'Large buzzard inhabiting open mountain areas').
+animal_info(owl,'Nocturnal bird of prey').
+animal_info(rock_eagle,'Powerful mountain bird of prey').
+animal_info(tree_frog,'Small amphibian living near wetlands').
+animal_info(common_toad,'Common amphibian found near water sources').
+animal_info(nose_horned_viper,'Venomous snake with a horn-like nose').
+animal_info(montpellier_snake,'Large non-venomous snake').
+animal_info(spur_thighed_tortoise,'Protected terrestrial tortoise species').
+
+valid_type(mammal).
+valid_type(bird).
+valid_type(reptile).
+valid_type(amphibian).
+
+ecosystem_role(brown_bear, top_predator).
+ecosystem_role(wolf, predator).
+ecosystem_role(wildcat, predator).
+ecosystem_role(otter, river_predator).
+ecosystem_role(roe_deer, herbivore).
+ecosystem_role(european_bison, herbivore).
+ecosystem_role(wild_boar, omnivore).
+ecosystem_role(white_headed_vulture, scavenger).
+ecosystem_role(egyptian_vulture, scavenger).
+ecosystem_role(white_tailed_eagle, predator).
+ecosystem_role(black_kite, predator).
+ecosystem_role(honey_buzzard, insect_controller).
+ecosystem_role(common_toad, insect_controller).
+ecosystem_role(tree_frog, insect_controller).
+ecosystem_role(stone_marten, small_predator).
+ecosystem_role(european_legless_lizard, insect_controller).
+ecosystem_role(caspian_whipsnake, rodent_controller).
+ecosystem_role(montpellier_snake, rodent_controller).
+ecosystem_role(wall_lizard, insect_controller).
+ecosystem_role(green_lizard, insect_controller).
+ecosystem_role(crimean_lizard, insect_controller).
+
+ecosystem_role(owl, nocturnal_predator).
+ecosystem_role(eagle, apex_predator).
+ecosystem_role(rock_eagle, apex_predator).
+ecosystem_role(european_nightjar, insect_controller).
+ecosystem_role(eurasian_wryneck, insect_controller).
+
+ecosystem_role(nose_horned_viper, rodent_controller).
+ecosystem_role(white_headed_vulture, scavenger).
+
+dangerous(brown_bear).
+dangerous(wolf).
+dangerous(nose_horned_viper).
+dangerous(wildcat).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+animal(X) :- mammal(X).
+animal(X) :- bird(X).
+animal(X) :- reptile(X).
+animal(X) :- amphibian(X).
+
+animal_type(X, mammal) :-
+    mammal(X).
+animal_type(X, bird) :-
+    bird(X).
+animal_type(X, reptile) :-
+    reptile(X).
+animal_type(X, amphibian) :-
+    amphibian(X).
+
+animal_exists(X) :-
+    animal(X).
+
+is_predator(X) :-
+    predator(X).
+is_herbivore(X) :-
+    herbivore(X).
+
+diet(X, predator) :-
+    predator(X).
+diet(X, herbivore) :-
+    herbivore(X).
+diet(X, omnivore) :-
+    omnivore(X).
+
+search_animals(Query, List) :-
+    findall(
+        A,
+        (
+            animal(A),
+            sub_atom(A, _, _, _, Query)
+        ),
+        List
+    ).
+
+suggest_animal(Type, yes, Animal) :-
+    animal_type(Animal, Type),
+    protected_species(Animal).
+
+suggest_animal(Type, no, Animal) :-
+    animal_type(Animal, Type).
+
+count_animals(Type, Count) :-
+    findall(
+        A,
+        animal_type(A, Type),
+        L
+    ),
+    length(L, Count).
+
+
+compare_animals(A1, A2) :-
+
+    % Тип
+    ( animal_type(A1, T), animal_type(A2, T)
+    -> writeln('Both animals are of the same type.')
+    ;  animal_type(A1, T1),
+       animal_type(A2, T2),
+       writeln('Animals are of different types.'),
+       format('First animal type: ~w~n', [T1]),
+       format('Second animal type: ~w~n', [T2])
+    ),
+
+    
+    ( dangerous(A1), dangerous(A2)
+    -> writeln('Both animals are dangerous.')
+    ; \+ dangerous(A1), \+ dangerous(A2)
+    -> writeln('Both animals are not dangerous.')
+    ; dangerous(A1)
+    -> writeln('Only the first animal is dangerous.')
+    ; writeln('Only the second animal is dangerous.')
+    ),
+
+  
+    ( predator(A1), predator(A2)
+    -> writeln('Both animals are predators.')
+    ; true
+    ),
+
+    ( herbivore(A1), herbivore(A2)
+    -> writeln('Both animals are herbivores.')
+    ; true
+    ),
+
+    % экосистеми
+    ( ecosystem_role(A1, R), ecosystem_role(A2, R)
+    -> writeln('Both animals have the same ecosystem role.')
+    ; ecosystem_role(A1, R1),
+      ecosystem_role(A2, R2),
+      writeln('Animals have different ecosystem roles.'),
+      format('First animal role: ~w~n', [R1]),
+      format('Second animal role: ~w~n', [R2])
+    ).
+% =========================================================
+% MODULE: ATTRACTIONS
+% =========================================================
+
+menu_attractions :-
+    repeat,
+    writeln('\n=== Attractions in the Rhodopes ==='),
+    writeln('1. Objects by type'),
+    writeln('2. Objects by region'),
+    writeln('3. All objects'),
+    writeln('4. Object information'),
+    writeln('5. Search by name'),
+    writeln('6. Check if object exists'),
+    writeln('7. Recommendation'),
+    writeln('8. Statistics'),
+    writeln('9. Search by description'),
+    writeln('10. Interesting facts'),
+    writeln('11. Good for photography'),
+    writeln('12. Dangerous places'),
+    writeln('13. Quiz'),
+    writeln('0. Back'),
+
+    write('Selection: '),
+    read_number(I), nl,
+    attractions_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+attractions_option(1) :-
+    write('Enter type (cave/fortress/phenomenon): '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Type),
+
+    writeln('--- Objects ---'),
+    findall(Name, object(Type, Name, _, _), List),
+
+    ( List \= []
+    -> forall(member(X, List), print_text(X))
+    ;  writeln('No objects found.')
+    ),
+    nl, !.
+
+attractions_option(2) :-
+    write('Enter region: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Region),
+
+    writeln('--- Objects ---'),
+    findall(Name, object(_, Name, Region, _), List),
+
+    ( List \= []
+    -> forall(member(X, List), print_text(X))
+    ;  writeln('No objects found.')
+    ),
+    nl, !.
+
+attractions_option(3) :-
+    writeln('--- All Attractions ---'),
+    forall(
+        object(Type, Name, Region, _),
+        (
+            print_kv('Object', Name),
+            print_kv('Type', Type),
+            print_kv('Region', Region),
+            nl
+        )
+    ),
+    nl, !.
+
+attractions_option(4) :-
+    write('Enter object: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Name),
+
+    ( object(Type, Name, Region, Desc)
+    -> ( print_kv('Type', Type),
+         print_kv('Region', Region),
+         print_kv('Info', Desc)
+       )
+    ;  print_text('Not found.')
+    ),
+    nl, !.
+
+attractions_option(5) :-
+    write('Enter keyword: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Query),
+
+    findall(Name,
+        ( object(_, Name, _, _),
+          sub_atom(Name, _, _, _, Query)
+        ),
+        List
+    ),
+
+    ( List \= []
+    -> forall(member(X, List), print_text(X))
+    ;  writeln('Nothing found.')
+    ),
+    nl, !.
+
+attractions_option(6) :-
+    write('Enter object: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Name),
+
+    ( object(_, Name, _, _)
+    -> print_kv('Result', 'Exists')
+    ;  print_kv('Result', 'Not found')
+    ),
+    nl, !.
+
+attractions_option(7) :-
+    writeln('Nature or history?'),
+    read_line_to_string(user_input, A1),
+    normalize_text(A1, Pref),
+
+    writeln('Easy or hard?'),
+    read_line_to_string(user_input, A2),
+    normalize_text(A2, Level),
+
+   ( sub_string(Pref, _, _, _, "nature"),
+    sub_string(Level, _, _, _, "easy")
+	-> print_kv('Recommendation', 'smolyan_lakes')
+
+	; sub_string(Pref, _, _, _, "nature")
+	-> print_kv('Recommendation', 'devils_throat')
+
+	; sub_string(Pref, _, _, _, "history")
+   -> print_kv('Recommendation', 'perperikon')
+
+	; print_kv('Recommendation', 'unknown')),
+    nl, !.
+
+attractions_option(8) :-
+    findall(X, object(_, X, _, _), All),
+    length(All, Total),
+
+    findall(X, object(cave, X, _, _), Caves),
+    length(Caves, CCount),
+
+    print_kv('Total objects', Total),
+    print_kv('Caves', CCount),
+    nl, !.
+
+attractions_option(9) :-
+    write('Keyword: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Query),
+
+    findall((Name,Desc),
+        (
+            object(_, Name, _, Desc),
+            normalize_text(Desc, DescNorm),
+            sub_string(DescNorm, _, _, _, Query)
+        ),
+        List),
+    
+    ( List \= []
+    -> forall(
+           member((Name,Desc), List),
+           (
+               print_kv('Object', Name),
+               print_kv('Description', Desc),
+               nl
+           )
+       ); 
+    print_text('No results.')),
+    nl, !.
+
+attractions_option(10) :-
+    writeln('--- Interesting Facts ---'),
+    write('Enter object: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Name),
+
+    ( interesting_fact(Name, Fact)
+    -> print_kv('Fact', Fact)
+    ;  print_text('No interesting fact found.')
+    ),
+    nl, !.
+
+attractions_option(11) :-
+    findall(X, good_for_photography(X), List),
+
+    ( List \= []
+    -> forall(member(X, List), print_text(X))
+    ;  writeln('No places found.')
+    ),
+    nl, !.
+
+attractions_option(12) :-
+    findall(X, dangerous_place(X), List),
+
+    ( List \= []
+    -> forall(member(X, List), print_text(X))
+    ;  writeln('No dangerous places.')
+    ),
+    nl, !.
+
+attractions_option(13) :-
+    writeln('Which is a cave? (perperikon / devils_throat)'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, R),
+
+    ( sub_string(R, _, _, _, "devils")
+    -> print_kv('Result', 'Correct!')
+    ;  print_kv('Result', 'Wrong')
+    ),
+    nl,
+    
+    writeln('Question 2: Which is one of the deepest gorges in Bulgaria? (trigrad_gorge/iskarsko_gorge)'), 
+	read_line_to_string(user_input, A2),
+	normalize_text(A2, R2),
+    
+	( sub_string(R2, _, _, _, "trigrad")
+	-> print_kv('Result 2', 'Correct!')
+	;  print_kv('Result 2', 'Wrong')
+	),
+	nl, !.
+
+attractions_option(0) :-
+    writeln('Back...'), nl, !.
+
+attractions_option(_) :-
+    writeln('Invalid option.'), nl.
+% =========================================================
+% DATA
+% =========================================================
+
+object(cave, devils_throat, trigrad, 'Underground waterfall cave').
+object(cave, yagodina_cave, yagodina, 'Famous cave with beautiful formations').
+object(fortress, perperikon, eastern_rhodopes, 'Ancient rock city').
+object(phenomenon, trigrad_gorge, trigrad, 'Deep canyon').
+object(phenomenon, smolyan_lakes, smolyan, 'Lake complex').
+object(monastery, bachkovo_monastery, bachkovo, 'One of the oldest Orthodox monasteries in Bulgaria').
+object(village, pamporovo, smolyan, 'Popular mountain resort in the Rhodopes').
+object(village, shiroka_laka, smolyan, 'Traditional Rhodope village with authentic architecture').
+
+interesting_fact(devils_throat, 'Legend: Orpheus is said to have entered the underworld here').
+interesting_fact(yagodina_cave, 'One of the longest caves in the Rhodopes').
+interesting_fact(perperikon, 'Possible ancient Thracian oracle city').
+interesting_fact(trigrad_gorge, 'One of the deepest gorges in Bulgaria').
+interesting_fact(smolyan_lakes, 'Lake system formed by glacial activity').
+interesting_fact(shiroka_laka, 'Famous for Rhodope music schools and bagpipes tradition').
+interesting_fact(bachkovo_monastery, 'Second largest monastery in Bulgaria').
+interesting_fact(pamporovo, 'One of the sunniest ski resorts in Europe').
+dangerous_place('devils_throat').
+dangerous_place('trigrad_gorge').
+% =========================================================
+% LOGIC
+% =========================================================
+
+good_for_photography(X) :-
+    object(phenomenon, X, _, _).
+
+% =========================================================
+% MODULE: GEOGRAPHY
+% =========================================================
+
+menu_geography :-
+    repeat,
+    writeln('\n=== Geography of the Rhodopes ==='),
+    writeln('1. Location info'),
+    writeln('2. Parts of the Rhodopes'),
+    writeln('3. Cities'),
+    writeln('4. Count cities'),
+    writeln('5. Check city'),
+    writeln('6. Cities by region'),
+    writeln('7. Largest cities'),
+    writeln('8. Geography quiz'),
+    writeln('9. Suggest travel region'),
+    writeln('10. Distance between cities'),
+    writeln('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    geo_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% INPUT NORMALIZATION
+% =========================================================
+normalize_city(Input, Output) :-
+    string_lower(Input, Lower),
+    split_string(Lower, " _.,!?;:", " _.,!?;:", Parts),
+    atomic_list_concat(Parts, '_', Output).
+read_city(City) :-
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, City).
+% =========================================================
+% DISPLAY HELPERS
+% =========================================================
+
+capitalize_word_geo(Word, Result) :-
+    atom_chars(Word, [H|T]),
+    upcase_atom(H, H2),
+    atom_chars(Result, [H2|T]).
+
+print_geo(X) :-
+    format_geo_label(X, T),
+    writeln(T).
+% =========================================================
+% GEOGRAPHICAL LABEL
+% =========================================================
+
+format_geo_label(Atom, Text) :-
+    atomic_list_concat(Parts, '_', Atom),
+    maplist(capitalize_word_geo, Parts, Caps),
+    atomic_list_concat(Caps, ' ', Text).
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+geo_option(1) :-
+    writeln('--- Location Info ---'),
+    forall(location(T),
+        print_geo(T)
+    ),
+    nl, !.
+
+geo_option(2) :-
+    writeln('--- Parts of the Rhodopes ---'),
+    forall(share(D),
+        print_text(D)
+    ),
+    nl, !.
+
+geo_option(3) :-
+    writeln('--- Cities ---'),
+    forall(city_rodopi(C),
+        print_text(C)
+    ),
+    nl, !.
+
+geo_option(4) :-
+    count_cities(N),
+    print_kv('Total cities', N),
+    nl, !.
+
+geo_option(5) :-
+    write('Enter city: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, City),
+
+    ( city_in_rhodopes(City)
+    -> print_text('City is in Rhodopes')
+    ;  print_text('City not found')
+    ),
+    nl, !.
+
+geo_option(6) :-
+    write('Enter region (western/central/eastern): '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Region),
+
+    findall(C, city_region(C, Region), List),
+
+    ( List \= []
+    -> forall(member(X, List), print_text(X))
+    ;  print_text('No cities found')
+    ),
+    nl, !.
+
+geo_option(7) :-
+    writeln('--- Largest Cities ---'),
+    forall(largest_city(C),
+        print_text(C)
+    ),
+    nl, !.
+
+geo_option(8) :-
+    writeln('--- Geography Quiz ---'),
+
+    writeln('Which city is in the Rhodopes? (Sofia / Smolyan)'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, R),
+
+    ( sub_string(R, _, _, _, "smolyan")
+    -> print_text('Correct!')
+    ;  print_text('Wrong!')
+    ),
+
+    writeln('Is Kardzhali in Eastern Rhodopes? (yes/no)'),
+    read_line_to_string(user_input, A2),
+    normalize_text(A2, R2),
+
+    ( sub_string(R2, _, _, _, "yes")
+    -> print_text('Correct!')
+    ;  print_text('Wrong!')
+    ),
+    nl, !.
+
+geo_option(9) :-
+    writeln('--- Travel Recommendation ---'),
+
+    writeln('Do you prefer nature or cities?'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, Pref),
+
+    ( sub_string(Pref, _, _, _, "nature")
+    -> print_text('Recommended: Western Rhodopes')
+    ;  print_text('Recommended: Eastern Rhodopes')
+    ),
+    nl, !.
+
+geo_option(10) :-
+    writeln('--- Distance Between Cities ---'),
+
+    write('Enter first city: '),
+    read_city(C1),
+
+    write('Enter second city: '),
+    read_city(C2),
+
+    ( distance(C1, C2, D)
+    -> print_kv('Distance (km)', D)
+    ;  approx_distance(C1, C2, D2)
+    -> print_kv('Approx distance (km)', D2)
+    ;  print_text('No data available')
+    ),
+    nl, !.
+
+geo_option(0) :-
+    print_text('Back...'), nl, !.
+
+geo_option(_) :-
+    print_text('Invalid selection!'), nl.
+
+% =========================================================
+% DATA
+% =========================================================
+
+location(southern_bulgaria).
+location(border_with_greece).
+location(near_thrace).
+location(near_rila_pirin).
+
+share(western).
+share(central).
+share(eastern).
+
+city_rodopi(smolyan).
+city_rodopi(chepelare).
+city_rodopi(devin).
+city_rodopi(madan).
+city_rodopi(asenovgrad).
+city_rodopi(kuklen).
+city_rodopi(dospat).
+city_rodopi(rakitovo).
+city_rodopi(madzharovo).
+city_rodopi(rudozym).
+city_rodopi(kardzhali).
+city_rodopi(zlatograd).
+
+city_region(dospat, western).
+city_region(rakitovo, western).
+city_region(madan, western).
+city_region(rudozym, western).
+city_region(asenovgrad, western ).
+
+city_region(kuklen, central).
+city_region(chepelare, central).
+city_region(smolyan, central).
+city_region(devin, central).
+
+city_region(madzharovo, eastern).
+city_region(kardzhali, eastern).
+city_region(zlatograd, eastern).
+
+population(smolyan, 51337).
+population(devin, 5182).
+population(kardzhali, 61598).
+population(chepelare, 4032).
+population(zlatograd, 5481).
+population(madan, 4594).
+population(asenovgrad, 45271).
+population(kuklen, 5542).
+population(dospat, 1838).
+population(rakitovo, 7749).
+population(madzharovo, 480).
+population(rudozym, 3091).
+
+distance_raw(smolyan, devin, 45.2).
+distance_raw(smolyan, kardzhali, 87.5).
+distance_raw(smolyan, asenovgrad, 87.4).
+distance_raw(smolyan, madzharovo, 151).
+distance_raw(smolyan, chepelare, 34.6).
+distance_raw(smolyan, madan, 31.8).
+distance_raw(kardzhali, asenovgrad, 76.1).
+distance_raw(kardzhali, madzharovo, 63.5).
+distance_raw(kardzhali, devin, 135).
+distance_raw(devin, dospat, 39.6).
+distance_raw(devin, asenovgrad, 96.7).
+distance_raw(devin, madzharovo, 97.5).
+distance_raw(zlatograd, madan, 25).
+distance_raw(zlatograd, madzharovo, 120).
+distance_raw(zlatograd, asenovgrad, 133).
+distance_raw(zlatograd, rakitovo, 224).
+distance_raw(rudozym, kuklen, 188).
+distance_raw(madan, kuklen, 114).
+distance_raw(madan, asenovgrad, 104).
+distance_raw(asenovgrad, chepelare, 52).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+count_cities(N) :-
+    findall(C, city_rodopi(C), L),
+    length(L, N).
+
+city_in_rhodopes(City) :-
+    city_rodopi(City).
+
+largest_city(City) :-
+    population(City, P),
+    forall(population(_, P2), P >= P2).
+
+large_city(City) :-
+    population(City, P),
+    P > 20000.
+
+approx_distance(C1, C2, 50) :-
+    city_region(C1, R),
+    city_region(C2, R),
+    C1 \= C2.
+
+distance(C1, C2, D) :-
+    distance_raw(C1, C2, D)
+    ;
+    distance_raw(C2, C1, D).
+
+% =========================================================
+% MENU Protected Areas
+% =========================================================
+
+menu_protected :-
+    repeat,
+    print_text('=== Protected areas in the Rhodopes ==='),
+    print_text('1. Reserves'),
+    print_text('2. Protected sites'),
+    print_text('3. Protected zones'),
+    print_text('4. Maintained reserves'),
+    print_text('5. Natural monuments'),
+    print_text('6. Guess category (mini-game)'),
+    print_text('7. Count reserves'),
+    print_text('8. Check reserve'),
+    print_text('9. Alphabetical list'),
+    print_text('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    protected_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+protected_option(1) :-
+    print_text('--- Reserves ---'),
+    forall(reserve(R),
+        print_kv('Reserve', R)
+    ),
+    nl, !.
+
+protected_option(2) :-
+    print_text('--- Protected Sites ---'),
+    forall(protected_site(S),
+        print_kv('Protected site', S)
+    ),
+    nl, !.
+
+protected_option(3) :-
+    print_text('--- Protected Zones ---'),
+    forall(protected_zone(Z),
+        print_kv('Protected zone', Z)
+    ),
+    nl, !.
+
+protected_option(4) :-
+    print_text('--- Maintained Reserves ---'),
+    forall(maintained_reserve(M),
+        print_kv('Maintained reserve', M)
+    ),
+    nl, !.
+
+protected_option(5) :-
+    print_text('--- Natural Monuments ---'),
+    forall(natural_monument(N),
+        print_kv('Natural monument', N)
+    ),
+    nl, !.
+
+protected_option(6) :-
+    print_text('--- Guess the Category Quiz ---'),
+    nl,
+
+    protected_quiz_q1(S1),
+    protected_quiz_q2(S2),
+    protected_quiz_q3(S3),
+    protected_quiz_q4(S4),
+
+    Total is S1 + S2 + S3 + S4,
+    print_kv('Your score', Total),
+    nl, !.
+
+
+protected_option(7) :-
+    count_reserves(N),
+    print_kv('Total reserves', N),
+    nl, !.
+
+protected_option(8) :-
+    print_text('Enter reserve: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Name),
+
+    ( reserve(Name)
+    -> print_text('Reserve exists!')
+    ;  print_text('No such reserve.')
+    ),
+    nl, !.
+
+protected_option(9) :-
+    print_text('--- Alphabetical List ---'),
+    all_protected(List),
+    sort(List, Sorted),
+
+    forall(member(X, Sorted),
+        print_text(X)
+    ),
+    nl, !.
+
+protected_option(0) :-
+    print_text('Back...'), nl, !.
+
+protected_option(_) :-
+    print_text('Invalid selection!'), nl, !.
+
+% =========================================================
+% DATA
+% =========================================================
+
+reserve(the_red_wall).
+reserve(kastrakli).
+reserve(vulchi_dol).
+reserve(beglika).         
+reserve(mantaritsa).       
+reserve(kupena).          
+reserve(amzovo).
+reserve(kazanite).
+
+maintained_reserve(dark_forest).
+maintained_reserve(konski_dol).
+maintained_reserve(borovets).
+maintained_reserve(boraka).
+maintained_reserve(chamlaka).
+maintained_reserve(zhenda).
+
+protected_zone(kaval_tepe).  
+
+protected_site(oreshari).
+protected_site(venus_hair_site).
+protected_site(ribino).
+protected_site(gyurgena).
+protected_site(dupkata).
+protected_site(likana).
+protected_site(momina_skala).
+protected_site(patronka).
+protected_site(chernata_skala).
+protected_site(meanders_of_byala_river).
+protected_site(golemiya_sipey).
+protected_site(gyumyurdzhinski_snezhnik).
+protected_site(the_defile).
+protected_site(pyasaka).             
+protected_site(samodivska_polyana).   
+protected_site(shiroka_polyana).     
+protected_site(lepenitsa_cave).
+protected_site(fotinski_waterfall).
+
+natural_monument(centuries_old_plane_tree).
+natural_monument(two_summer_oaks).
+natural_monument(two_plane_trees).
+natural_monument(walnut_tree).
+natural_monument(holly).
+natural_monument(thracian_oak).
+natural_monument(sessile_oak).
+natural_monument(snowdrop).
+natural_monument(orpheus_silivryak).
+natural_monument(oriental_plane_tree).
+natural_monument(fir_tree).
+natural_monument(peony).
+
+% =========================================================
+% LOGIC
+% =========================================================
+
+count_reserves(N) :-
+    findall(R, reserve(R), L),
+    length(L, N).
+
+all_protected(List) :-
+    findall(X, reserve(X), R),
+    findall(Y, protected_site(Y), S),
+    findall(Z, protected_zone(Z), Zs),
+    findall(M, maintained_reserve(M), M1),
+    findall(N, natural_monument(N), N1),
+
+    append(R, S, T1),
+    append(T1, Zs, T2),													
+    append(T2, M1, T3),
+    append(T3, N1, List). 
+
+protected_quiz_q1(Score) :-
+    writeln('Q1: Kupena belongs to which category? (reserve / protected_site / natural_monument)'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, R),
+
+    ( sub_string(R, _, _, _, "reserve")
+    -> (print_text('Correct!'), Score = 1)
+    ;  (print_text('Wrong!'), Score = 0)
+    ),
+    nl.
+protected_quiz_q2(Score) :-
+    writeln('Q2: Fotinski Waterfall belongs to?'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, R),
+
+    ( sub_string(R, _, _, _, "protected")
+    -> (print_text('Correct!'), Score = 1)
+    ;  (print_text('Wrong!'), Score = 0)
+    ),
+    nl.
+protected_quiz_q3(Score) :-
+    writeln('Q3: The Red Wall is a?'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, R),
+
+    ( sub_string(R, _, _, _, "reserve")
+    -> (print_text('Correct!'), Score = 1)
+    ;  (print_text('Wrong!'), Score = 0)
+    ),
+    nl.
+
+protected_quiz_q4(Score) :-
+    writeln('Q4: Kaval Tepe is?'),
+    read_line_to_string(user_input, A),
+    normalize_text(A, R),
+
+    ( sub_string(R, _, _, _, "zone")
+    -> (print_text('Correct!'), Score = 1)
+    ;  (print_text('Wrong!'), Score = 0)
+    ),
+    nl.
+% =========================================================
+% MODULE: TOURISM
+% =========================================================
+
+menu_tourism :-
+    repeat,
+    writeln('\n=== Tourism in the Rhodopes ==='),
+    writeln('1. Resorts'),
+    writeln('2. Activities'),
+    writeln('3. Routes'),
+    writeln('4. Find route by starting point'),
+    writeln('5. Check if route exists'),
+    writeln('6. Activity Statistics'),
+    writeln('7. Routes by activity'),
+    writeln('8. Recommended activities (by season)'),
+    writeln('9. Tourism explanation'),
+    writeln('10. True/False check'),
+    writeln('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    tour_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% OPTIONS
+% =========================================================
+
+tour_option(1) :-
+    print_text('--- Resorts ---'),
+    forall(resort(R),
+        print_text(R)
+    ),
+    nl, !.
+
+tour_option(2) :-
+    print_text('--- Activities ---'),
+    forall(activity(A),
+        print_text(A)
+    ),
+    nl, !.
+
+tour_option(3) :-
+    print_text('--- Routes by Activity ---'),
+    findall(T, route(_, _, T), Types0),
+    sort(Types0, Types),
+    forall(member(T, Types),
+        (
+            print_kv('Activity', T),
+            forall(route(A, B, T),
+                (
+                    print_kv('From', A),
+                    print_kv('To', B),
+                    nl)),
+            nl
+        )
+    ),
+    nl, !.
+
+tour_option(4) :-
+    write('Enter start: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Start), nl,
+
+    findall((B,T), route(Start,B,T), L),
+    ( L \= []
+    -> forall(member((B,T), L),
+        ( print_kv('From', Start),
+          print_kv('To', B),
+          print_kv('Type', T),
+          nl
+        ))
+    ; print_text('No routes found.')
+    ),
+    nl, !.
+
+tour_option(5) :-
+    write('Enter start: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, S), nl,
+
+    ( has_route(S)
+    -> print_text('Route exists')
+    ;  print_text('No route')
+    ),
+    nl, !.
+
+tour_option(6) :- 
+    print_text('--- Activity Statistics ---'),
+
+    findall(T, route(_, _, T), Types0),
+    sort(Types0, Types),
+
+    forall(member(T, Types),
+    (
+        findall(1, route(_, _, T), L),
+        length(L, Count),
+
+        print_kv('Activity', T),
+        print_kv('Routes', Count),
+        nl
+    )),
+
+    nl, !.
+
+tour_option(7) :-
+    write('Enter activity: '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, A), nl,
+
+    findall((From,To), route(From,To,A), L),
+    ( L \= []
+    -> forall(member((F,T), L),
+        ( print_kv('Route from', F),
+          print_kv('Route to', T),
+          nl
+        ))
+    ; print_text('No routes for this activity.')
+    ),
+    nl, !.
+
+tour_option(8) :-
+    write('Enter season (winter/summer/autumn/spring): '),
+    read_line_to_string(user_input, Input),
+    normalize_atom(Input, Season), nl,
+
+    findall(A, season_activity(Season, A), L),
+    ( L \= []
+    -> forall(member(A, L),
+        print_text(A)
+    )
+    ; print_text('No recommendations.')
+    ),
+    nl, !.
+
+tour_option(9) :-
+    print_text('--- Tourism Explanation ---'),
+	print_text('Tourism in the Rhodopes is diverse because:'),
+    forall(explanation(E),
+        print_text(E)
+    ),
+
+    nl, !.
+
+tour_option(10) :-
+    write('True or False: Pamporovo is a ski resort: '),
+    read_line_to_string(user_input, Ans),
+    normalize_atom(Ans, A), nl,
+
+    ( sub_string(A, _, _, _, true)
+    -> print_text('Correct!')
+    ; sub_string(A, _, _, _, false)
+    -> print_text('Incorrect.')
+    ; print_text('Please answer true or false.')
+    ),
+    nl, !.
+
+tour_option(0) :-
+    print_text('Back...'), nl, !.
+
+tour_option(_) :-
+    print_text('Invalid selection!'), nl, !.
+% =========================================================
+% DATA
+% =========================================================
+resort(pamporovo).
+resort(yundola).
+resort(st_konstantin).
+resort(tsigov_chark).
+resort(rakitovo).
+resort(narechenski_bani).
+resort(zdravets).
+resort(koprivkite).
+resort(shiroka_polyana).
+resort(studenets).
+resort(white_church).
+resort(chepelare).
+resort(devin).
+resort(banite).
+resort(velingrad).
+resort(dospat).
+resort(madan).
+resort(smolyan).
+resort(trigrad).
+resort(yagodina).
+resort(bachkovo).
+resort(asenovgrad).
+
+activity(hiking).
+activity(cycling).
+activity(spa).
+activity(skiing).
+activity(sanatoriums).
+activity(horseback_riding).
+activity(caving).
+activity(nature_walks).
+activity(photography).
+activity(ecotourism).
+
+route(smolyan, smolyan_lakes, hiking).
+route(trigrad, devils_throat, caving).
+route(velingrad, shiroka_polyana, hiking).
+route(devin, ravnya_area, horseback_riding).
+route(velingrad, hotels_in_velingrad, spa).
+route(velingrad, hotels_in_velingrad, sanatoriums).
+route(yagodina, yagodinska_cave, caving).
+route(chepelare, wonderful_bridges, hiking).
+route(pamporovo, snezhnik_peak, skiing).
+route(smolyan, trigrad, hiking).
+route(trigrad, yagodina, hiking).
+route(yagodina, smolyan_lakes, photography).
+route(smolyan, madan, cycling).
+route(madan, smolyan, ecotourism).
+route(asenovgrad, bachkovo, nature_walks).
+route(bachkovo, kri_kali_area, hiking).
+route(dospat, shiroka_polyana, cycling).
+route(dospat, tsigov_chark, cycling).
+route(velingrad, koprivkite, hiking).
+route(chepelare, pamporovo, cycling).
+route(pamporovo, yundola, hiking).
+
+explanation(mountain_terrain).
+explanation(mineral_springs_spa_tourism).
+explanation(rich_natural_landmarks).
+explanation(suitable_climate).
+  
+
+season_activity(winter, skiing).
+season_activity(winter, spa).
+season_activity(winter, sanatoriums).
+season_activity(summer, hiking).
+season_activity(summer, cycling).
+season_activity(summer, caving).
+season_activity(summer, photography).
+season_activity(autumn, hiking).
+season_activity(autumn, photography).
+season_activity(autumn, ecotourism).
+season_activity(spring, hiking).
+season_activity(spring, cycling).
+season_activity(spring, birdwatching).
+
+% =========================================================
+% LOGIC
+% =========================================================
+has_route(Start) :-
+    route(Start, _, _).
+
+recommend(spa, R) :-
+    resort(R).
+recommend(Activity, Destination) :-
+    route(_, Destination, Activity).
+
+recommend(Activity, Destination) :-
+    route(_, Destination, Activity).
+
+
+% =========================================================
+% MODULE: CULTURE AND LEGENDS
+% =========================================================
+
+menu_culture :-
+    repeat,
+    print_text('=== Culture and Legends in the Rhodopes ==='),
+    print_text('1. Legends'),
+    print_text('2. Ancient Mentions'),
+    print_text('3. Historical sites'),
+    print_text('4. Traditions'),
+    print_text('5. Count legends'),
+    print_text('6. Search legend by word'),
+    print_text('7. Legends by place'),
+    print_text('8. Quiz'),
+    print_text('9. Statistics'),
+    print_text('10. Explanation'),
+    print_text('11. Culture Recommendations'),
+    print_text('0. Back'),
+    write('Selection: '),
+    read_number(I), nl,
+    cult_option(I),
+    ( I = 0 -> ! ; fail ).
+
+% =========================================================
+% Word match in legend name
+% =========================================================
+
+legend_contains(Word, L) :-
+    legend(L),
+    normalize_text(L, Low),
+    normalize_text(Word, W),
+    split_string(Low, "_", "_", Parts),
+    member(P, Parts),
+    sub_string(P, _, _, _, W).
+% =========================================================
+% OPTIONS
+% =========================================================
+
+cult_option(1) :-
+    print_text('--- Legends ---'),
+    forall(legend(L),
+        print_text(L)
+    ),
+    nl, !.
+
+cult_option(2) :-
+    print_text('--- Ancient Mentions ---'),
+    forall(fact(S,T),
+        ( print_kv('Source', S),
+          print_kv('Fact', T),
+          nl
+        )
+    ),
+    nl, !.
+
+cult_option(3) :-
+    print_text('--- Historical Sites ---'),
+    forall(historical_place(P,D),
+        ( print_kv('Place', P),
+          print_kv('Description', D),
+          nl
+        )
+    ),
+    nl, !.
+
+cult_option(4) :-
+    print_text('--- Traditions ---'),
+    forall(tradition(T),
+        print_text(T)
+    ),
+    nl, !.
+
+cult_option(5) :-
+    count_legends(N),
+    print_kv('Total legends', N),
+    nl, !.
+
+cult_option(6) :-
+    write('Enter word: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, W), nl,
+
+    findall(L,
+        ( legend(L),
+          normalize_text(L, Low),
+          sub_string(Low, _, _, _, W)
+        ),
+        List),
+
+    ( List \= []
+    -> forall(member(X,List),
+        print_text(X)
+    )
+    ; print_text('No matches found.')
+    ),
+    nl, !.
+
+cult_option(7) :-
+    write('Enter place: '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, P), nl,
+
+    findall(L,
+        ( legend_place(Key, P),
+          legend(L),
+          normalize_text(L, Low),
+          sub_string(Low, _, _, _, Key)
+        ),
+        List),
+
+    ( List \= []
+    -> forall(member(X,List),
+        print_text(X)
+    )
+    ; print_text('No legends found.')
+    ),
+    nl, !.
+
+cult_option(8) :-
+    print_text('--- Culture Quiz ---'),
+
+    print_text('1. Who is associated with the Rhodopes?'),
+    read_line_to_string(user_input, A1),
+    normalize_text(A1, R1),
+    ( sub_string(R1, _, _, _, "orpheus")
+    -> print_text('Correct!')
+    ;  print_text('Wrong: Orpheus')
+    ),
+
+    print_text('2. Which place is an ancient rock city?'),
+    read_line_to_string(user_input, A2),
+    normalize_text(A2, R2),
+    ( sub_string(R2, _, _, _, "perperikon")
+    -> print_text('Correct!')
+    ;  print_text('Wrong: Perperikon')
+    ),
+    nl, !.
+
+cult_option(9) :-
+    findall(L, legend(L), Ls),
+    findall(P, historical_place(P,_), Ps),
+    findall(T, tradition(T), Ts),
+
+    length(Ls, LN),
+    length(Ps, PN),
+    length(Ts, TN),
+
+    print_text('--- Statistics ---'),
+    print_kv('Legends', LN),
+    print_kv('Historical places', PN),
+    print_kv('Traditions', TN),
+    nl, !.
+
+cult_option(10) :-
+    print_text('--- Cultural Explanation ---'),
+    forall(culture_explanation(Fact),
+        print_text(Fact)
+    ),
+    nl, !.
+
+cult_option(11) :-
+    print_text('--- Culture Recommendations ---'),
+    nl,
+
+    write('Enter interest (mythology/tradition/history/spiritual): '),
+    read_line_to_string(user_input, Input),
+    normalize_text(Input, Interest), nl,
+
+    (
+        Interest = mythology ->
+            print_text('You are interested in mythology, so you might enjoy:'), nl;
+        Interest = tradition ->
+            print_text('You are interested in traditions, so you might enjoy:'), nl;
+        Interest = history ->
+            print_text('You are interested in history, so you might enjoy:'), nl;
+        Interest = spiritual ->
+            print_text('You are interested in spiritual heritage, so you might enjoy:'), nl;
+        print_text('General recommendations:'), nl
+    ),
+
+    findall(R,
+        culture_recommendation(Interest, R),
+        List
+    ),
+
+    ( List \= []
+    ->
+        forall(member(X, List),
+            print_text(X)
+        );
+   
+        print_text('No recommendations found.')
+    ),
+
+    nl,
+    print_text('--- End ---'),
+    nl, !.
+
+cult_option(0) :-
+    print_text('Back...'), nl, !.
+
+cult_option(_) :-
+    print_text('Invalid selection!'), nl, !.
+%=========================================================
+% DATA
+% =========================================================
+legend('The Rhodopes are associated with Orpheus and ancient Thracian legends.').
+legend('The rock sanctuaries in the Eastern Rhodopes are associated with cults and rituals.').
+legend('Orpheus was believed to live in the Rhodopes.').
+legend('The Devils Throat Cave is said to lead to the underworld.').
+legend('The Rhodope Mountains preserve ancient Thracian spiritual heritage.').
+
+historical_place(perperikon,'Ancient rock city and sanctuary in the Eastern Rhodopes.').
+historical_place(ustra,'Medieval fortress with observation posts.').
+historical_place(belintash,'Sacred Thracian rock site.').
+
+tradition('Rhodope bagpipes and folk songs.').
+tradition('Culinary traditions: patatnik, klin, kachamak.').
+tradition('Kaba gaida - traditional Rhodope bagpipe.').
+tradition('Folk songs such as "Izlel e Delyo Haydutin".').
+
+culture_explanation('Thracian heritage forms the historical foundation of the Rhodopes.').
+culture_explanation('The myth of Orpheus is deeply connected with the Rhodope Mountains.').
+culture_explanation('Perperikon represents one of the most important ancient rock sanctuaries.').
+culture_explanation('The Rhodopes preserve a living tradition of folklore, music and rituals.').
+culture_explanation('Many legends describe caves and mountains as symbolic gateways to the underworld.').
+culture_topic(cave, 'The Devils Throat Cave is said to lead to the underworld.').
+culture_topic(orpheus, 'The myth of Orpheus is deeply connected with the Rhodopes.').
+culture_topic(perperikon, 'Perperikon represents a major Thracian sanctuary.').
+culture_topic(thracians, 'Thracian heritage forms the historical foundation of the Rhodopes.').
+% Ancient mentions
+
+fact('Thucydides, Historia, 2.96.1-4',
+    'Citalc raised the Thracians living between Hemus and Rhodope Mountains and other neighboring tribes; most of the independent mountain Thracians, called the Di, lived in Rhodope.').
+fact('Theocritus, Idyllia, 7.72-77',
+    'Tityrus sings how Daphnis loved Xenea and how the mountains, oaks, and the banks of the Chimera River mourned.').
+fact('P. Vergilius Maro, Georgica, 1.332',
+    'He throws his blazing lightning over Athos, Rhodope, and high Ceraunia.').
+fact('P. Vergilius Maro, Georgica, 3.351',
+    'In Scythian lands and Meotida, the roaring Ister flows over golden sand, and Rhodope stretches across the field.').
+fact('P. Vergilius Maro, Georgica, 4.461',
+    'The chorus of his sister Dryad fills the mountain peaks with cries; the rocks of Rhodope wail, along with Pangaeus and the land of Rhesus.').
+
+legend_place(orpheus, perperikon).
+legend_place(devils_throat, trigrad).
+
+% =========================================================
+% LOGIC
+% =========================================================
+culture_recommendation(mythology, D) :-
+    culture_topic(perperikon, D).
+
+culture_recommendation(mythology, L) :-
+    legend(L).
+
+culture_recommendation(tradition, T) :-
+    tradition(T).
+
+culture_recommendation(history, F) :-
+    fact(_, F).
+
+culture_recommendation(spiritual, E) :-
+    culture_explanation(E).
+
+count_legends(N) :-
+    findall(L, legend(L), List),
+    length(List, N).
