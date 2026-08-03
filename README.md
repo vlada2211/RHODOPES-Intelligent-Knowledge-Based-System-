@@ -7,7 +7,6 @@ Developed a modular rule-based AI system about the Rhodope Mountains using SWI-P
 RHODOPES is an intelligent knowledge-based system developed in **SWI-Prolog** as a Bachelor's degree project. The system provides structured information about the Rhodope Mountains and allows users to explore different topics through an interactive menu.
 
 The project demonstrates the application of **knowledge representation, logical inference, rule-based reasoning, and intelligent recommendations**.
-
 ## Features
 
 - Interactive menu-based interface
